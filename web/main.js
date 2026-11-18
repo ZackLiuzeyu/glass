@@ -703,6 +703,7 @@ worker.postMessage({
   link,
   pass: savedPass,
   rtcPort,
+  wsUrl: config.tcpBridge && !remoteKey && currentHost === homeHost ? `${location.origin.replace(/^http/, 'ws')}/tcp-bridge` : undefined,
   device: deviceLabel(),
   // A wide-colour screen: a Display P3 stream is drawn in P3, not clipped to sRGB.
   wideColor: matchMedia('(color-gamut: p3)').matches,
@@ -1286,7 +1287,7 @@ function switchMachine(host, name = host) {
   displays = [];
   showStatus('connecting', `Connecting to ${name}`);
   armMachineTimeout();
-  worker.postMessage({ type: 'switchHost', url: wtUrl(host) });
+  worker.postMessage({ type: 'switchHost', url: wtUrl(host), wsUrl: config.tcpBridge && host === homeHost ? `${location.origin.replace(/^http/, 'ws')}/tcp-bridge` : undefined });
   log('info', 'switch machine', { host });
   ui.toast({ text: `Connecting to ${name}…`, timeout: 2500 });
 }

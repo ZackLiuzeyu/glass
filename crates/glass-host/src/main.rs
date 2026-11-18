@@ -70,6 +70,7 @@ mod soft_encode;
 mod status;
 mod support;
 mod tailscale;
+mod tcp_bridge;
 mod testmode;
 mod thumbs;
 mod update;

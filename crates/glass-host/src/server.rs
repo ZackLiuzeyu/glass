@@ -144,6 +144,7 @@ pub async fn run(
     let nearby_listen = listen.clone();
     let version_dir = web_dir.clone();
     let config_tls_name = nearby_tls_name.clone().flatten();
+    let tcp_bridge = std::env::var("GLASS_TCP_BRIDGE").as_deref() == Ok("1");
     let client_config = move || {
         let (wt_host, self_signed, tls_name) = (wt_host.clone(), self_signed.clone(), config_tls_name.clone());
         let version = web_version(&version_dir);
@@ -158,6 +159,7 @@ pub async fn run(
             };
             Json(serde_json::json!({
                 "wtPort": wt_port,
+                "tcpBridge": tcp_bridge,
                 "wtHost": wt_host,
                 // Who this is, for an app that remembers it (and finds it again over a VPN).
                 "self": crate::nearby::proof(cert_hash.as_deref(), tls_name.as_deref()),
@@ -196,6 +198,7 @@ pub async fn run(
     let app = axum::Router::new()
         .merge(extra_routes.unwrap_or_default())
         .merge(extras)
+        .merge(if tcp_bridge { crate::tcp_bridge::routes(wt_port, listen.wt_dial()) } else { axum::Router::new() })
         .route("/config.json", get(client_config))
         .route(
             "/manifest.webmanifest",

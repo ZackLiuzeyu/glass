@@ -6,6 +6,7 @@ import {
 } from './proto.js';
 import { VideoStream, probeCodecs, probeDecoders, setDecoderStep } from './video-stream.js';
 import { RtcTransport } from './rtc-transport.js';
+import { WsTransport } from './ws-transport.js';
 import { BenchProbe } from './bench.js';
 
 const PING_INTERVAL_MS = 500;
@@ -41,6 +42,7 @@ let certHash;
 let token;
 let device; // e.g. "Safari on iPad", shown on the host
 let rtcPort; // remote access: WebRTC over the main thread instead of WebTransport
+let wsUrl; // optional TCP bridge for a userspace Tailscale host
 let link; // magic link code; traded for a guest pass on first sign-in
 let pass; // guest pass
 let wideColor = false; // the screen shows Display P3: draw video in it
@@ -119,7 +121,7 @@ function videoStream(index) {
 
 self.onmessage = async ({ data }) => {
   if (data.type === 'init') {
-    ({ url, certHash, token, link, pass, rtcPort, device } = data);
+    ({ url, certHash, token, link, pass, rtcPort, wsUrl, device } = data);
     localCursor = Boolean(data.localCursor);
     wideColor = Boolean(data.wideColor);
     setDecoderStep(data.decoderStep ?? 0);
@@ -165,6 +167,7 @@ self.onmessage = async ({ data }) => {
     sendClipboard(data.clip).catch((e) => log('error', `send clipboard failed: ${e.message ?? e}`));
   } else if (data.type === 'switchHost') {
     url = data.url;
+    wsUrl = data.wsUrl;
     refused = undefined;
     // End the session or attempt in progress (it may still be on its way to the old host);
     // the reconnect loop picks up the new URL immediately.
@@ -302,7 +305,7 @@ async function connect() {
   log('info', 'connecting', rtcPort ? { remote: true } : { url, pinned: !!certHash });
   aborted = false;
   attemptAt = performance.now();
-  transport = rtcPort ? new RtcTransport(rtcPort) : new WebTransport(url, options);
+  transport = rtcPort ? new RtcTransport(rtcPort) : wsUrl ? new WsTransport(wsUrl) : new WebTransport(url, options);
   const session = transport;
   // Ended on purpose while it was coming up: nothing more goes to this host.
   const stillWanted = () => { if (aborted) throw new Error('attempt ended'); };

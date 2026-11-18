@@ -409,7 +409,7 @@ pub fn bridge_watching(id: u64, on: bool) {
 }
 
 /// Registers a bridge; it's removed again when the guard drops.
-fn register_bridge() -> (u64, crate::rtp::Viewer, BridgeGuard) {
+pub(crate) fn register_bridge() -> (u64, crate::rtp::Viewer, BridgeGuard) {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let (authed_tx, authed) = tokio::sync::watch::channel(false);
@@ -436,7 +436,7 @@ fn register_bridge() -> (u64, crate::rtp::Viewer, BridgeGuard) {
     )
 }
 
-struct BridgeGuard(u64);
+pub(crate) struct BridgeGuard(u64);
 
 impl Drop for BridgeGuard {
     fn drop(&mut self) {
